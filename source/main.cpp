@@ -15,24 +15,14 @@ MicroBit uBit;
 int bitMasks[] = {128, 64, 32, 16, 8, 4, 2, 1};
 uint32_t ledPins[] = {P0, P1, P2, P8, P9, P11, P13, P14};
 
-// function that returns the bits for turned on leds according to input 
-uint32_t sumPins(int *input, int size) {
-	uint32_t result = 0;
-	for (int i = 0; i < size; i++) {
-		if (*input == 1) {
-			result += ledPins[i];
-		}
-		input++;
-	}
-	return result;
-}
-
 void turnOn() {
 	volatile uint32_t *d = (uint32_t *) 0x50000514;
         volatile uint32_t *p = (uint32_t *) 0x50000504;
 	
-	int input[] = {1, 1, 1, 1, 1, 1, 1, 1};
-	uint32_t bits = sumPins(input, 8);
+	uint32_t bits = 0;
+	for (int i = 0; i < 8; i++) {
+		bits += ledPins[i];
+	}
 
 	*d = bits; 
         *p = bits;
@@ -42,6 +32,8 @@ void turnOn() {
 void setLEDs(uint8_t value) {
 	volatile uint32_t *d = (uint32_t *) 0x50000514;
         volatile uint32_t *p = (uint32_t *) 0x50000504;
+	*d = 0;
+	*p = 0;
 	uint32_t bits = 0;
 	for (int i = 0; i < 8; i++) {
 		uint8_t bit = bitMasks[i] & value;
@@ -51,22 +43,46 @@ void setLEDs(uint8_t value) {
 	*p = bits;
 }
 
-void sleep(int milliSeconds) {
-	for (int i = 0; i < milliSeconds; i++) {
-		for (int j = 0; j < 64000; j++);
+void sleep(int ms) {
+	for (int i = 0; i < ms; i++) {
+		for (volatile int j = 0; j < 6400; j++) {
+			;
+		}
 	}
 }
 
 void rollingCounter() {
-	for (int i = 0; i < 256; i++) {
+	for (int i = 1; i < 256; i++) {
 		setLEDs(i);
 		sleep(118);
 	}
 }
 
+uint8_t power(int x, int y) {
+	uint8_t result = 1;
+	for (int i = 0; i < y; i++) {
+		result *= x;
+	}
+	return result;
+}
+
+void knightRider() {
+	while (1) {
+		for (int i = 0; i < 7; i++) {
+			uint8_t bit = power(2, i);
+			sleep(170);
+			setLEDs(bit);
+		}
+		for (int i = 7; i > 0; i--) {
+			uint8_t bit = power(2, i);
+			sleep(170);
+			setLEDs(bit);
+		}
+	}
+}
+
 int main()
 {
-	turnOn();
-	rollingCounter();
+	knightRider();
 }
 
